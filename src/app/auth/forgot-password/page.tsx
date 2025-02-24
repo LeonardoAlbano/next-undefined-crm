@@ -5,8 +5,8 @@ import { Label } from "@/components/ui/label";
 
 export default function ForgotPassword() {
   return (
-    <main className="relative min-h-screen flex items-center justify-center bg-black">
-      <div className="absolute inset-0">
+    <main className="relative min-h-screen flex items-center justify-center bg-blackpurple sm:bg-black">
+      <div className="absolute inset-0 hidden sm:block">
         <img
           src="/picture.png"
           className="w-full h-full object-cover"
@@ -14,7 +14,7 @@ export default function ForgotPassword() {
         />
       </div>
 
-      <section className="relative z-10 bg-blackpurple  rounded-xl shadow-lg max-w-lg p-10 w-full text-center">
+      <section className="relative z-10 bg-blackpurple rounded-xl mb-10 shadow-none sm:shadow-lg max-w-lg p-10 w-full text-center">
         <h1 className="text-4xl text-white font-bold">Esqueceu a senha?</h1>
         <p className="text-gray-300 text-sm mt-2">
           Não há nada com que se preocupar, enviaremos uma mensagem para
