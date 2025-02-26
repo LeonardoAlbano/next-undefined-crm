@@ -9,6 +9,9 @@ export default {
   ],
   theme: {
   	extend: {
+		gridTemplateColumns: {
+			app: "minmax(18rem, 20rem) 1fr",
+		},
   		colors: {
 			blackpurple: "#240147",
   			background: "hsl(var(--background))",

@@ -13,13 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
+import { signInWithEmailAndPassword } from "./actions";
+
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">
       <section className="flex h-full flex-col items-center justify-center px-4 bg-blackpurple">
-        <form className="space-y-4 w-full max-w-xs">
+        <form
+          action={signInWithEmailAndPassword}
+          className="space-y-4 w-full max-w-xs"
+        >
           <div className="space-y-1">
             <Label htmlFor="email" className="text-white">
               E-mail

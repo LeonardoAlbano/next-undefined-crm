@@ -15,6 +15,9 @@ export default function SignUpPage() {
 
   return (
     <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      <section className="hidden md:block">
+        <img src="/picture.png" className="w-full h-screen object-cover" />
+      </section>
       <section className="flex h-full flex-col items-center justify-center px-4 bg-blackpurple pb-20">
         <div className="m-10">
           <h1 className="text-4xl font-semibold text-white">Cria conta</h1>
@@ -82,10 +85,6 @@ export default function SignUpPage() {
             Criar conta
           </Button>
         </form>
-      </section>
-
-      <section className="hidden md:block">
-        <img src="/picture.png" className="w-full h-screen object-cover" />
       </section>
     </main>
   );
