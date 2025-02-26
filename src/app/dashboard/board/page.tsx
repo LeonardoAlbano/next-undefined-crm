@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { KanbanColumn } from "@/components/kanban/kaban-column";
@@ -27,7 +26,6 @@ const initialColumns: Column[] = [
 ];
 
 export default function BoardPage() {
-  const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [selectedColor, setSelectedColor] = useState("bg-purple-600");
   const [dragInfo, setDragInfo] = useState<{
@@ -62,7 +60,6 @@ export default function BoardPage() {
       };
       updateColumns([...columns, newColumn]);
       setNewColumnTitle("");
-      setIsAddingColumn(false);
     }
   };
 
@@ -99,58 +96,39 @@ export default function BoardPage() {
           />
         ))}
 
-        {isAddingColumn ? (
-          <div className="w-[280px] flex-shrink-0 rounded-xl bg-[#2D1854]/50 p-4">
-            <div className="space-y-4">
-              <Input
-                value={newColumnTitle}
-                onChange={(e) => setNewColumnTitle(e.target.value)}
-                placeholder="Nome da coluna"
-                className="border-purple-900 bg-[#1E0A3C] text-white"
-              />
+        <div className="w-[280px] flex-shrink-0 rounded-xl bg-white/5 p-4 backdrop-blur-sm">
+          <Input
+            value={newColumnTitle}
+            onChange={(e) => setNewColumnTitle(e.target.value)}
+            placeholder="Nome da coluna"
+            className="border-white/20 bg-white/10 text-white placeholder:text-white/50"
+          />
 
-              <div>
-                <label className="mb-2 block text-sm text-gray-400">
-                  Cor da coluna
-                </label>
-                <div className="grid grid-cols-5 gap-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      className={`h-6 w-6 rounded-full ${color} ${selectedColor === color ? "ring-2 ring-white" : ""}`}
-                      onClick={() => setSelectedColor(color)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setIsAddingColumn(false)}
-                  className="text-gray-400 hover:bg-purple-900/20 hover:text-white"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleAddColumn}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  Criar
-                </Button>
-              </div>
+          <div className="mt-4">
+            <label className="mb-2 block text-sm text-white/70">
+              Cor da coluna
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {colors.map((color) => (
+                <button
+                  key={color}
+                  className={`h-6 w-6 rounded-full ${color} ${selectedColor === color ? "ring-2 ring-white" : ""}`}
+                  onClick={() => setSelectedColor(color)}
+                />
+              ))}
             </div>
           </div>
-        ) : (
-          <Button
-            variant="outline"
-            className="h-12 flex-shrink-0 border border-dashed border-white/20 px-4 text-white hover:bg-purple-900/20 hover:text-white"
-            onClick={() => setIsAddingColumn(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar nova coluna
-          </Button>
-        )}
+
+          <div className="mt-4">
+            <Button
+              onClick={handleAddColumn}
+              disabled={!newColumnTitle.trim()}
+              className="w-full border-0 bg-white/10 text-white hover:bg-white/20"
+            >
+              Criar
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
