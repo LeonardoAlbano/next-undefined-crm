@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Card, Column } from "@/types/kanban";
+import type { Card, Column } from "@/@types/kanban";
 
 export function useKanban(initialColumns: Column[]) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);

@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Card, Column } from "@/types/kanban";
+import type { Card, Column } from "@/@types/kanban";
 
 interface KanbanColumnProps {
   column: Column;

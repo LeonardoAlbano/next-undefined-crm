@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Card } from "@/types/kanban";
+import type { Card } from "@/@types/kanban";
 
 import { CardForm } from "./card-form";
 

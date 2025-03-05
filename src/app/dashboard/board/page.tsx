@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
+import type { Column } from "@/@types/kanban";
 import { KanbanColumn } from "@/components/kanban/kaban-column";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useKanban } from "@/hooks/useKanban";
-import type { Column } from "@/types/kanban";
 
 const initialColumns: Column[] = [
   {
@@ -25,7 +25,7 @@ const initialColumns: Column[] = [
   },
 ];
 
-export default function BoardPage() {
+export default function DashboardBoard() {
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [selectedColor, setSelectedColor] = useState("bg-purple-600");
   const [dragInfo, setDragInfo] = useState<{

@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Card } from "@/types/kanban";
+import type { Card } from "@/@types/kanban";
 
 interface CardFormProps {
   onSubmit: (data: Omit<Card, "id">) => void;
