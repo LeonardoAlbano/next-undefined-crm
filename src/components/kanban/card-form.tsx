@@ -97,7 +97,7 @@ export function CardForm({
             disabled={!cardTitle || !amount}
             className="bg-purple-600 hover:bg-purple-700"
           >
-            {initialData ? "Salvar" : "Adicionar"}
+            {initialData ? "Salva" : "Adicionar"}
           </Button>
         </div>
       </div>

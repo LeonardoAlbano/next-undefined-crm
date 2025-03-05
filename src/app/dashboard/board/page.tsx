@@ -69,7 +69,6 @@ export default function BoardPage() {
 
   const handleDragOver = (columnId: string) => {
     if (dragInfo && dragInfo.sourceColumnId !== columnId) {
-      // Apenas visual feedback aqui
     }
   };
 
@@ -81,7 +80,7 @@ export default function BoardPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-start justify-center bg-blackpurple py-8">
+    <div className="flex min-h-screen items-center justify-center bg-sky-950 py-8 pb-52">
       <div className="flex gap-4">
         {columns.map((column) => (
           <KanbanColumn
