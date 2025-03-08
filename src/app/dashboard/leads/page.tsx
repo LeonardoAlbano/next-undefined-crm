@@ -1,7 +1,11 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { List, Mail, Pencil, Phone, Search, Trash, X } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,8 +23,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Pagination,
   PaginationContent,
@@ -38,9 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "@/components/ui/use-toast";
 
-// Tipos
 interface Lead {
   id: string;
   fullName: string;
@@ -49,22 +58,39 @@ interface Lead {
   phone: string;
 }
 
+const leadSchema = z.object({
+  fullName: z.string().min(1, "Nome completo é obrigatório"),
+  nickname: z.string().optional(),
+  email: z.string().min(1, "Email é obrigatório").email("Email inválido"),
+  phone: z.string().optional(),
+});
+
 export default function DashboardLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
+
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
-  const [fullName, setFullName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
+
+  const form = useForm<z.infer<typeof leadSchema>>({
+    resolver: zodResolver(leadSchema),
+    defaultValues: {
+      fullName: "",
+      nickname: "",
+      email: "",
+      phone: "",
+    },
+  });
+
   const filteredLeads = leads.filter(
     (lead) =>
       lead.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone.includes(searchTerm)
   );
+
   const formatPhone = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     if (numbers.length <= 2) return numbers;
@@ -74,10 +100,12 @@ export default function DashboardLeads() {
   };
 
   const resetForm = () => {
-    setFullName("");
-    setNickname("");
-    setEmail("");
-    setPhone("");
+    form.reset({
+      fullName: "",
+      nickname: "",
+      email: "",
+      phone: "",
+    });
     setCurrentLead(null);
     setIsEditing(false);
   };
@@ -89,68 +117,44 @@ export default function DashboardLeads() {
 
   const openEditForm = (lead: Lead) => {
     setCurrentLead(lead);
-    setFullName(lead.fullName);
-    setNickname(lead.nickname);
-    setEmail(lead.email);
-    setPhone(lead.phone);
+    form.reset({
+      fullName: lead.fullName,
+      nickname: lead.nickname,
+      email: lead.email,
+      phone: lead.phone,
+    });
     setIsEditing(true);
     setFormOpen(true);
   };
 
   // Salvar lead (adicionar ou editar)
-  const saveLead = () => {
-    // Validação básica
-    if (!fullName || !email || !phone) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Por favor, insira um email válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const onSubmit = (data: z.infer<typeof leadSchema>) => {
     const leadData: Lead = {
       id: isEditing && currentLead ? currentLead.id : `lead-${Date.now()}`,
-      fullName,
-      nickname,
-      email,
-      phone: formatPhone(phone),
+      fullName: data.fullName,
+      nickname: data.nickname || "",
+      email: data.email,
+      phone: data.phone || "",
     };
 
     if (isEditing && currentLead) {
       setLeads(leads.map((l) => (l.id === currentLead.id ? leadData : l)));
-      toast({
-        title: "Lead atualizado",
-        description: `O lead "${fullName}" foi atualizado com sucesso.`,
+      toast.success("Lead atualizado", {
+        description: `O lead "${data.fullName}" foi atualizado com sucesso.`,
       });
     } else {
       setLeads([...leads, leadData]);
-      toast({
-        title: "Lead adicionado",
-        description: `O lead "${fullName}" foi adicionado com sucesso.`,
+      toast.success("Lead adicionado", {
+        description: `O lead "${data.fullName}" foi adicionado com sucesso.`,
       });
     }
-
-    // Fechar formulário e resetar
     setFormOpen(false);
     resetForm();
   };
 
-  // Excluir lead
   const deleteLead = (id: string) => {
     setLeads(leads.filter((lead) => lead.id !== id));
-    toast({
-      title: "Lead excluído",
+    toast.success("Lead excluído", {
       description: "O lead foi excluído com sucesso.",
     });
   };
@@ -293,91 +297,122 @@ export default function DashboardLeads() {
               </button>
             </div>
 
-            <div className="mb-6">
-              <Label htmlFor="fullName" className="mb-2 block text-white">
-                Nome completo
-              </Label>
-              <Input
-                id="fullName"
-                className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
-
-            <div className="mb-6">
-              <Label htmlFor="nickname" className="mb-2 block text-white">
-                Apelido
-              </Label>
-              <Input
-                id="nickname"
-                className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-              />
-            </div>
-
-            <div className="mb-6">
-              <Label htmlFor="email" className="mb-2 block text-white">
-                Email
-              </Label>
-              <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
-                  <Mail className="h-5 w-5 text-zinc-400" />
-                </div>
-                <Input
-                  id="email"
-                  type="email"
-                  className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                  placeholder="email@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="mb-10">
-              <Label htmlFor="phone" className="mb-2 block text-white">
-                Telefone
-              </Label>
-              <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
-                  <Phone className="h-5 w-5 text-zinc-400" />
-                </div>
-                <Input
-                  id="phone"
-                  className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                  placeholder="(00) 00000-0000"
-                  value={phone}
-                  onChange={(e) => {
-                    const formattedPhone = formatPhone(e.target.value);
-                    setPhone(formattedPhone);
-                  }}
-                  maxLength={15}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="flex justify-end gap-4 px-0">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-white hover:bg-purple-900 hover:text-white"
-                onClick={() => {
-                  setFormOpen(false);
-                  resetForm();
-                }}
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
               >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                className="bg-violet-600 text-white hover:bg-violet-700"
-                onClick={saveLead}
-              >
-                {isEditing ? "Atualizar" : "Salvar"}
-              </Button>
-            </DialogFooter>
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">
+                        Nome completo
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nickname"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Apelido</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Email</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                          <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
+                            <Mail className="h-5 w-5 text-zinc-400" />
+                          </div>
+                          <Input
+                            {...field}
+                            type="email"
+                            className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            placeholder="email@exemplo.com"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Telefone</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                          <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
+                            <Phone className="h-5 w-5 text-zinc-400" />
+                          </div>
+                          <Input
+                            {...field}
+                            className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            placeholder="(00) 00000-0000"
+                            maxLength={15}
+                            onChange={(e) => {
+                              const formattedPhone = formatPhone(
+                                e.target.value
+                              );
+                              field.onChange(formattedPhone);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter className="flex justify-end gap-4 px-0 pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-white hover:bg-purple-900 hover:text-white"
+                    onClick={() => {
+                      setFormOpen(false);
+                      resetForm();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-violet-600 text-white hover:bg-violet-700"
+                  >
+                    {isEditing ? "Atualizar" : "Salvar"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </div>
         </DialogContent>
       </Dialog>

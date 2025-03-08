@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -14,6 +15,9 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,8 +36,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Pagination,
   PaginationContent,
@@ -58,9 +69,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "@/components/ui/use-toast";
 
-// Tipos
 type ProjectStatus =
   | "finalizado"
   | "follow-up"
@@ -76,11 +85,44 @@ interface Project {
   link?: string;
   status: ProjectStatus;
   value: number;
-  startDate: string; // Mudamos para string para evitar problemas de hidratação
-  endDate: string; // Mudamos para string para evitar problemas de hidratação
+  startDate: string;
+  endDate: string;
 }
 
-// Função para formatar valor em BRL
+const projectSchema = z
+  .object({
+    name: z.string().min(1, "Nome do projeto é obrigatório"),
+    client: z.string().optional(),
+    link: z.string().optional(),
+    status: z.enum([
+      "finalizado",
+      "follow-up",
+      "em execução",
+      "novo",
+      "imagem recebida",
+      "em negociação",
+    ]),
+    value: z
+      .string()
+      .optional()
+      .refine((val) => !val || !isNaN(Number(val.replace(",", "."))), {
+        message: "Valor deve ser um número válido",
+      }),
+    startDate: z.string().min(1, "Data de início é obrigatória"),
+    endDate: z.string().min(1, "Data de término é obrigatória"),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      return end >= start;
+    },
+    {
+      message: "A data de término deve ser igual ou posterior à data de início",
+      path: ["endDate"],
+    }
+  );
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -88,7 +130,6 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-// Função para formatar data
 const formatDate = (dateStr: string) => {
   try {
     return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
@@ -97,7 +138,6 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-// Componente para renderizar o badge de status com a cor correta
 const StatusBadge = ({ status }: { status: ProjectStatus }) => {
   switch (status) {
     case "finalizado":
@@ -134,124 +174,100 @@ const StatusBadge = ({ status }: { status: ProjectStatus }) => {
 };
 
 export default function DashboardProject() {
-  // Estado para armazenar os projetos - usando strings para datas para evitar problemas de hidratação
   const [projects, setProjects] = useState<Project[]>([]);
 
-  // Estado para o formulário
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
-  // Estados do formulário
-  const [projectName, setProjectName] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [projectLink, setProjectLink] = useState("");
-  const [projectStatus, setProjectStatus] = useState<ProjectStatus>("novo");
-  const [projectValue, setProjectValue] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  // Estado para pesquisa
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filtrar projetos com base na pesquisa
+  const form = useForm<z.infer<typeof projectSchema>>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      name: "",
+      client: "",
+      link: "",
+      status: "novo",
+      value: "",
+      startDate: "",
+      endDate: "",
+    },
+  });
+
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.client.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Resetar o formulário
   const resetForm = () => {
-    setProjectName("");
-    setClientName("");
-    setProjectLink("");
-    setProjectStatus("novo");
-    setProjectValue("");
-    setStartDate("");
-    setEndDate("");
+    form.reset({
+      name: "",
+      client: "",
+      link: "",
+      status: "novo",
+      value: "",
+      startDate: "",
+      endDate: "",
+    });
     setCurrentProject(null);
     setIsEditing(false);
   };
 
-  // Abrir formulário para adicionar novo projeto
   const openAddForm = () => {
     resetForm();
     setFormOpen(true);
   };
 
-  // Abrir formulário para editar projeto
   const openEditForm = (project: Project) => {
     setCurrentProject(project);
-    setProjectName(project.name);
-    setClientName(project.client);
-    setProjectLink(project.link || "");
-    setProjectStatus(project.status);
-    setProjectValue(project.value.toString());
-    setStartDate(project.startDate);
-    setEndDate(project.endDate);
+    form.reset({
+      name: project.name,
+      client: project.client,
+      link: project.link || "",
+      status: project.status,
+      value: project.value.toString(),
+      startDate: project.startDate,
+      endDate: project.endDate,
+    });
     setIsEditing(true);
     setFormOpen(true);
   };
 
-  // Salvar projeto (adicionar ou editar)
-  const saveProject = () => {
-    // Validação básica
-    if (
-      !projectName ||
-      !clientName ||
-      !projectValue ||
-      !startDate ||
-      !endDate
-    ) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const onSubmit = (data: z.infer<typeof projectSchema>) => {
     const projectData: Project = {
       id:
         isEditing && currentProject ? currentProject.id : `proj-${Date.now()}`,
-      name: projectName,
-      client: clientName,
-      link: projectLink,
-      status: projectStatus,
-      value: Number.parseFloat(projectValue.replace(",", ".")),
-      startDate: startDate,
-      endDate: endDate,
+      name: data.name,
+      client: data.client || "",
+      link: data.link,
+      status: data.status,
+      value: data.value ? Number.parseFloat(data.value.replace(",", ".")) : 0,
+      startDate: data.startDate,
+      endDate: data.endDate,
     };
 
     if (isEditing && currentProject) {
-      // Atualizar projeto existente
       setProjects(
         projects.map((p) => (p.id === currentProject.id ? projectData : p))
       );
-      toast({
-        title: "Projeto atualizado",
-        description: `O projeto "${projectName}" foi atualizado com sucesso.`,
+      toast.success("Projeto atualizado", {
+        description: `O projeto "${data.name}" foi atualizado com sucesso.`,
       });
     } else {
-      // Adicionar novo projeto
       setProjects([...projects, projectData]);
-      toast({
-        title: "Projeto adicionado",
-        description: `O projeto "${projectName}" foi adicionado com sucesso.`,
+      toast.success("Projeto adicionado", {
+        description: `O projeto "${data.name}" foi adicionado com sucesso.`,
       });
     }
-
-    // Fechar formulário e resetar
     setFormOpen(false);
     resetForm();
   };
 
-  // Excluir projeto
   const deleteProject = (id: string) => {
     setProjects(projects.filter((project) => project.id !== id));
-    toast({
-      title: "Projeto excluído",
+    toast.success("Projeto excluído", {
       description: "O projeto foi excluído com sucesso.",
     });
   };
@@ -366,9 +382,7 @@ export default function DashboardProject() {
                 <PaginationLink href="#">1</PaginationLink>
               </PaginationItem>
               <PaginationItem>
-                <PaginationLink href="#" isActive>
-                  2
-                </PaginationLink>
+                <PaginationLink href="#">2</PaginationLink>
               </PaginationItem>
               <PaginationItem>
                 <PaginationLink href="#">3</PaginationLink>
@@ -384,7 +398,6 @@ export default function DashboardProject() {
         </div>
       </div>
 
-      {/* Formulário de Projeto */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="border-none bg-purple-950 p-0 text-white sm:max-w-[620px]">
           <DialogHeader className="sr-only">
@@ -408,158 +421,217 @@ export default function DashboardProject() {
               </button>
             </div>
 
-            <div className="mb-6">
-              <Label htmlFor="name" className="mb-2 block text-white">
-                Nome do projeto
-              </Label>
-              <Input
-                id="name"
-                className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-              />
-            </div>
-
-            <div className="mb-6">
-              <Label htmlFor="client" className="mb-2 block text-white">
-                Cliente
-              </Label>
-              <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
-                  <User className="h-5 w-5 text-zinc-400" />
-                </div>
-                <Input
-                  id="client"
-                  className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                  placeholder="Nome do cliente"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">
+                        Nome do projeto
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
 
-            <div className="mb-6">
-              <Label htmlFor="link" className="mb-2 block text-white">
-                Link do projeto
-              </Label>
-              <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
-                  <LinkIcon className="h-5 w-5 text-zinc-400" />
-                </div>
-                <Input
-                  id="link"
-                  className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                  placeholder="https://..."
-                  value={projectLink}
-                  onChange={(e) => setProjectLink(e.target.value)}
+                <FormField
+                  control={form.control}
+                  name="client"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Cliente</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                          <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
+                            <User className="h-5 w-5 text-zinc-400" />
+                          </div>
+                          <Input
+                            {...field}
+                            className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            placeholder="Nome do cliente"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate" className="mb-2 block text-white">
-                  Início previsto
-                </Label>
-                <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                  <Input
-                    id="startDate"
-                    type="date"
-                    className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                  <div className="flex h-10 w-10 items-center justify-center border-l border-zinc-700">
-                    <Calendar className="h-5 w-5 text-zinc-400" />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="endDate" className="mb-2 block text-white">
-                  Término previsto
-                </Label>
-                <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                  <Input
-                    id="endDate"
-                    type="date"
-                    className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                  <div className="flex h-10 w-10 items-center justify-center border-l border-zinc-700">
-                    <Calendar className="h-5 w-5 text-zinc-400" />
-                  </div>
-                </div>
-              </div>
-            </div>
+                <FormField
+                  control={form.control}
+                  name="link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">
+                        Link do projeto
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                          <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
+                            <LinkIcon className="h-5 w-5 text-zinc-400" />
+                          </div>
+                          <Input
+                            {...field}
+                            className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="mb-10 grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status" className="mb-2 block text-white">
-                  Status
-                </Label>
-                <Select
-                  value={projectStatus}
-                  onValueChange={(value) =>
-                    setProjectStatus(value as ProjectStatus)
-                  }
-                >
-                  <SelectTrigger
-                    id="status"
-                    className="border-zinc-700 bg-purple-950 text-white"
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">
+                          Início previsto
+                        </FormLabel>
+                        <FormControl>
+                          <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                            <Input
+                              {...field}
+                              type="date"
+                              className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            />
+                            <div className="flex h-10 w-10 items-center justify-center border-l border-zinc-700">
+                              <Calendar className="h-5 w-5 text-zinc-400" />
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">
+                          Término previsto
+                        </FormLabel>
+                        <FormControl>
+                          <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
+                            <Input
+                              {...field}
+                              type="date"
+                              className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
+                            />
+                            <div className="flex h-10 w-10 items-center justify-center border-l border-zinc-700">
+                              <Calendar className="h-5 w-5 text-zinc-400" />
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Status</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-zinc-700 bg-purple-950 text-white">
+                              <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="border-zinc-700 bg-purple-950 text-white">
+                            <SelectItem value="novo">Novo</SelectItem>
+                            <SelectItem value="em execução">
+                              Em execução
+                            </SelectItem>
+                            <SelectItem value="follow-up">Follow-up</SelectItem>
+                            <SelectItem value="finalizado">
+                              Finalizado
+                            </SelectItem>
+                            <SelectItem value="em negociação">
+                              Em negociação
+                            </SelectItem>
+                            <SelectItem value="imagem recebida">
+                              Imagem recebida
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="value"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">
+                          Valor do projeto (R$)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
+                            placeholder="0,00"
+                            onChange={(e) => {
+                              const value = e.target.value.replace(
+                                /[^0-9,.]/g,
+                                ""
+                              );
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <DialogFooter className="flex justify-end gap-4 px-0 pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-white hover:bg-purple-900 hover:text-white"
+                    onClick={() => {
+                      setFormOpen(false);
+                      resetForm();
+                    }}
                   >
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent className="border-zinc-700 bg-purple-950 text-white">
-                    <SelectItem value="novo">Novo</SelectItem>
-                    <SelectItem value="em execução">Em execução</SelectItem>
-                    <SelectItem value="follow-up">Follow-up</SelectItem>
-                    <SelectItem value="finalizado">Finalizado</SelectItem>
-                    <SelectItem value="em negociação">Em negociação</SelectItem>
-                    <SelectItem value="imagem recebida">
-                      Imagem recebida
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="value" className="mb-2 block text-white">
-                  Valor do projeto (R$)
-                </Label>
-                <Input
-                  id="value"
-                  className="border-zinc-700 bg-purple-950 text-white placeholder:text-zinc-500 focus-visible:ring-purple-500"
-                  placeholder="0,00"
-                  value={projectValue}
-                  onChange={(e) => {
-                    // Permitir apenas números e vírgula
-                    const value = e.target.value.replace(/[^0-9,.]/g, "");
-                    setProjectValue(value);
-                  }}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="flex justify-end gap-4 px-0">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-white hover:bg-purple-900 hover:text-white"
-                onClick={() => {
-                  setFormOpen(false);
-                  resetForm();
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                className="bg-violet-600 text-white hover:bg-violet-700"
-                onClick={saveProject}
-              >
-                {isEditing ? "Atualizar" : "Salvar"}
-              </Button>
-            </DialogFooter>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-violet-600 text-white hover:bg-violet-700"
+                  >
+                    {isEditing ? "Atualizar" : "Salvar"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </div>
         </DialogContent>
       </Dialog>
