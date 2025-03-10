@@ -3,12 +3,16 @@
 
 /* eslint-disable jsx-a11y/alt-text */
 /* eslint-disable @next/next/no-img-element */
+import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { signUp } from "@/api/sign-up";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,18 +29,38 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const navigate = useRouter();
+
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<SignUpForm>();
 
+  const { mutateAsync: signUpFn } = useMutation({
+    mutationFn: signUp,
+  });
+
   async function handleSignUp(data: SignUpForm) {
-    console.log(data);
+    try {
+      console.log(data);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      await signUpFn({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    toast.success("Cadastro criado com sucesso");
+      toast.success("Cadastro criado com sucesso", {
+        action: {
+          label: "Login",
+          onClick: () => navigate.push(`/auth/sign-in?email=${data.email}`),
+        },
+      });
+    } catch {
+      toast.error("Erro ao cadastrar novo usuário");
+    }
   }
 
   return (

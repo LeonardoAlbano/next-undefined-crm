@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -27,13 +28,18 @@ const signInForm = z.object({
 type SignInForm = z.infer<typeof signInForm>;
 
 export default function SignInPage() {
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<SignInForm>();
+  } = useForm<SignInForm>({
+    defaultValues: {
+      email: searchParams.get("email") ?? "",
+    },
+  });
 
   const { mutateAsync: authenticate } = useMutation({
     mutationFn: signIn,
