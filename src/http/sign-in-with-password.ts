@@ -1,24 +1,28 @@
 import { api } from "./api-client";
 
-interface SignInWithPasswordRequest {
-    email: string
-    password: string
+interface SignInWithPasswordParams {
+  email: string
+  password: string
 }
 
 interface SignInWithPasswordResponse {
-    token: string
+  email: string
+  name: string
+  accessToken: string
 }
 
+export async function signInWithPassword({ email, password }: SignInWithPasswordParams) {
+  const response = await api
+    .post("users/login", {
+      json: {
+        email,
+        password,
+      },
+    })
+    .json<SignInWithPasswordResponse>();
 
-export async function signInWithPassword({ email, password }: SignInWithPasswordRequest) {
-      const result = await api
-        .post("sessions", {
-          json: {
-            email,
-            password,
-          },
-        })
-        .json<SignInWithPasswordResponse>();
-
-        return result;
+  return {
+    token: response.accessToken,
+  };
 }
+
