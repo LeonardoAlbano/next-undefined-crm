@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { HTTPError } from "ky";
 import { List, Mail, Pencil, Phone, Search, Trash, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -49,46 +51,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Lead {
-  id: string;
-  fullName: string;
-  nickname: string;
-  email: string;
-  phone: string;
-}
+import {
+  type Client,
+  createClient,
+  deleteClient,
+  getClients,
+  updateClient,
+} from "@/http/clients";
 
 const leadSchema = z.object({
-  fullName: z.string().min(1, "Nome completo é obrigatório"),
-  nickname: z.string().optional(),
-  email: z.string().min(1, "Email é obrigatório").email("Email inválido"),
-  phone: z.string().optional(),
+  name: z.string().min(1, "Nome é obrigatório"),
+  surname: z.string().min(1, "Sobrenome é obrigatório"),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
 });
 
 export default function DashboardLeads() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentLead, setCurrentLead] = useState<Lead | null>(null);
+  const [currentLead, setCurrentLead] = useState<Client | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm<z.infer<typeof leadSchema>>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
-      fullName: "",
-      nickname: "",
+      name: "",
+      surname: "",
       email: "",
       phone: "",
     },
   });
 
+  useEffect(() => {
+    async function loadLeads() {
+      try {
+        setIsLoading(true);
+        const data = await getClients();
+        setLeads(data);
+      } catch (error) {
+        console.error("Failed to load leads:", error);
+        toast.error("Falha ao carregar leads", {
+          description:
+            "Não foi possível carregar seus leads. Tente novamente mais tarde.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadLeads();
+  }, []);
+
   const filteredLeads = leads.filter(
     (lead) =>
-      lead.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm)
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.email &&
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.phone && lead.phone.includes(searchTerm))
   );
 
   const formatPhone = (value: string) => {
@@ -101,8 +125,8 @@ export default function DashboardLeads() {
 
   const resetForm = () => {
     form.reset({
-      fullName: "",
-      nickname: "",
+      name: "",
+      surname: "",
       email: "",
       phone: "",
     });
@@ -115,48 +139,81 @@ export default function DashboardLeads() {
     setFormOpen(true);
   };
 
-  const openEditForm = (lead: Lead) => {
+  const openEditForm = (lead: Client) => {
     setCurrentLead(lead);
     form.reset({
-      fullName: lead.fullName,
-      nickname: lead.nickname,
-      email: lead.email,
-      phone: lead.phone,
+      name: lead.name,
+      surname: lead.surname,
+      email: lead.email || "",
+      phone: lead.phone || "",
     });
     setIsEditing(true);
     setFormOpen(true);
   };
 
-  // Salvar lead (adicionar ou editar)
-  const onSubmit = (data: z.infer<typeof leadSchema>) => {
-    const leadData: Lead = {
-      id: isEditing && currentLead ? currentLead.id : `lead-${Date.now()}`,
-      fullName: data.fullName,
-      nickname: data.nickname || "",
-      email: data.email,
-      phone: data.phone || "",
-    };
+  const onSubmit = async (data: z.infer<typeof leadSchema>) => {
+    try {
+      if (isEditing && currentLead) {
+        const updatedLead = await updateClient(currentLead.id, {
+          name: data.name,
+          surname: data.surname,
+          email: data.email,
+          phone: data.phone,
+        });
 
-    if (isEditing && currentLead) {
-      setLeads(leads.map((l) => (l.id === currentLead.id ? leadData : l)));
-      toast.success("Lead atualizado", {
-        description: `O lead "${data.fullName}" foi atualizado com sucesso.`,
-      });
-    } else {
-      setLeads([...leads, leadData]);
-      toast.success("Lead adicionado", {
-        description: `O lead "${data.fullName}" foi adicionado com sucesso.`,
-      });
+        setLeads(leads.map((l) => (l.id === currentLead.id ? updatedLead : l)));
+        toast.success("Lead atualizado", {
+          description: `O lead "${data.name}" foi atualizado com sucesso.`,
+        });
+      } else {
+        const newLead = await createClient({
+          name: data.name,
+          surname: data.surname,
+          email: data.email,
+          phone: data.phone,
+        });
+
+        setLeads([...leads, newLead]);
+        toast.success("Lead adicionado", {
+          description: `O lead "${data.name}" foi adicionado com sucesso.`,
+        });
+      }
+      setFormOpen(false);
+      resetForm();
+    } catch (err) {
+      if (err instanceof HTTPError) {
+        const errorData = await err.response.json();
+        toast.error(
+          isEditing ? "Falha ao atualizar lead" : "Falha ao adicionar lead",
+          {
+            description:
+              errorData.message || "Ocorreu um erro. Tente novamente.",
+          }
+        );
+      } else {
+        toast.error(
+          isEditing ? "Falha ao atualizar lead" : "Falha ao adicionar lead",
+          {
+            description:
+              "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+          }
+        );
+      }
     }
-    setFormOpen(false);
-    resetForm();
   };
 
-  const deleteLead = (id: string) => {
-    setLeads(leads.filter((lead) => lead.id !== id));
-    toast.success("Lead excluído", {
-      description: "O lead foi excluído com sucesso.",
-    });
+  const handleDeleteLead = async (id: number) => {
+    try {
+      await deleteClient(id);
+      setLeads(leads.filter((lead) => lead.id !== id));
+      toast.success("Lead excluído", {
+        description: "O lead foi excluído com sucesso.",
+      });
+    } catch (err) {
+      toast.error("Falha ao excluir lead", {
+        description: "Ocorreu um erro ao excluir o lead. Tente novamente.",
+      });
+    }
   };
 
   return (
@@ -193,7 +250,13 @@ export default function DashboardLeads() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLeads.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                  Carregando leads...
+                </TableCell>
+              </TableRow>
+            ) : filteredLeads.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                   Nenhum lead encontrado.
@@ -206,15 +269,10 @@ export default function DashboardLeads() {
                     <Checkbox />
                   </TableCell>
                   <TableCell className="font-medium text-zinc-100">
-                    {lead.fullName}
-                    {lead.nickname && (
-                      <div className="text-xs text-zinc-400">
-                        {lead.nickname}
-                      </div>
-                    )}
+                    {lead.name} {lead.surname}
                   </TableCell>
-                  <TableCell>{lead.phone}</TableCell>
-                  <TableCell>{lead.email}</TableCell>
+                  <TableCell>{lead.phone || "-"}</TableCell>
+                  <TableCell>{lead.email || "-"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -230,7 +288,7 @@ export default function DashboardLeads() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-500 focus:text-red-500"
-                            onClick={() => deleteLead(lead.id)}
+                            onClick={() => handleDeleteLead(lead.id)}
                           >
                             <Trash className="mr-2 h-4 w-4" />
                             Excluir lead
@@ -273,7 +331,6 @@ export default function DashboardLeads() {
         </div>
       </div>
 
-      {/* Formulário de Lead */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="border-none bg-purple-950 p-0 text-white sm:max-w-[620px]">
           <DialogHeader className="sr-only">
@@ -304,12 +361,10 @@ export default function DashboardLeads() {
               >
                 <FormField
                   control={form.control}
-                  name="fullName"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">
-                        Nome completo
-                      </FormLabel>
+                      <FormLabel className="text-white">Nome</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -323,10 +378,10 @@ export default function DashboardLeads() {
 
                 <FormField
                   control={form.control}
-                  name="nickname"
+                  name="surname"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Apelido</FormLabel>
+                      <FormLabel className="text-white">Sobrenome</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
