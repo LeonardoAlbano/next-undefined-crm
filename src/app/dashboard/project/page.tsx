@@ -4,17 +4,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { HTTPError } from "ky";
 import {
   Calendar,
   LinkIcon,
   List,
+  Loader2,
   Pencil,
   Search,
   Trash,
-  User,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -69,6 +70,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { type Client, getClients } from "@/http/clients";
+import {
+  createProject,
+  deleteProject,
+  getProjects,
+  type Project,
+  updateProject,
+} from "@/http/projects";
 
 type ProjectStatus =
   | "finalizado"
@@ -78,21 +87,10 @@ type ProjectStatus =
   | "imagem recebida"
   | "em negociação";
 
-interface Project {
-  id: string;
-  name: string;
-  client: string;
-  link?: string;
-  status: ProjectStatus;
-  value: number;
-  startDate: string;
-  endDate: string;
-}
-
 const projectSchema = z
   .object({
     name: z.string().min(1, "Nome do projeto é obrigatório"),
-    client: z.string().optional(),
+    clientId: z.string().min(1, "Cliente é obrigatório"),
     link: z.string().optional(),
     status: z.enum([
       "finalizado",
@@ -123,14 +121,18 @@ const projectSchema = z
     }
   );
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value?: number) => {
+  if (value === undefined || value === null) return "R$ 0,00";
+
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   }).format(value);
 };
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return "";
+
   try {
     return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
   } catch (e) {
@@ -138,7 +140,9 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-const StatusBadge = ({ status }: { status: ProjectStatus }) => {
+const StatusBadge = ({ status }: { status?: string }) => {
+  if (!status) return null;
+
   switch (status) {
     case "finalizado":
       return (
@@ -175,6 +179,9 @@ const StatusBadge = ({ status }: { status: ProjectStatus }) => {
 
 export default function DashboardProject() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -186,30 +193,54 @@ export default function DashboardProject() {
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: "",
-      client: "",
+      clientId: "",
       link: "",
       status: "novo",
       value: "",
-      startDate: "",
-      endDate: "",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
     },
   });
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const [projectsData, clientsData] = await Promise.all([
+          getProjects(),
+          getClients(),
+        ]);
+        setProjects(projectsData);
+        setClients(clientsData);
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        toast.error("Falha ao carregar dados", {
+          description:
+            "Não foi possível carregar os dados. Tente novamente mais tarde.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client.toLowerCase().includes(searchTerm.toLowerCase())
+      project.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const resetForm = () => {
     form.reset({
       name: "",
-      client: "",
+      clientId: "",
       link: "",
       status: "novo",
       value: "",
-      startDate: "",
-      endDate: "",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
     });
     setCurrentProject(null);
     setIsEditing(false);
@@ -224,52 +255,97 @@ export default function DashboardProject() {
     setCurrentProject(project);
     form.reset({
       name: project.name,
-      client: project.client,
+      clientId: project.clientId.toString(),
       link: project.link || "",
-      status: project.status,
-      value: project.value.toString(),
-      startDate: project.startDate,
-      endDate: project.endDate,
+      status: (project.status as ProjectStatus) || "novo",
+      value: project.value?.toString() || "",
+      startDate: project.startDate
+        ? new Date(project.startDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      endDate: project.endDate
+        ? new Date(project.endDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
     });
     setIsEditing(true);
     setFormOpen(true);
   };
 
-  const onSubmit = (data: z.infer<typeof projectSchema>) => {
-    const projectData: Project = {
-      id:
-        isEditing && currentProject ? currentProject.id : `proj-${Date.now()}`,
-      name: data.name,
-      client: data.client || "",
-      link: data.link,
-      status: data.status,
-      value: data.value ? Number.parseFloat(data.value.replace(",", ".")) : 0,
-      startDate: data.startDate,
-      endDate: data.endDate,
-    };
+  const onSubmit = async (data: z.infer<typeof projectSchema>) => {
+    try {
+      setIsSubmitting(true);
 
-    if (isEditing && currentProject) {
-      setProjects(
-        projects.map((p) => (p.id === currentProject.id ? projectData : p))
-      );
-      toast.success("Projeto atualizado", {
-        description: `O projeto "${data.name}" foi atualizado com sucesso.`,
-      });
-    } else {
-      setProjects([...projects, projectData]);
-      toast.success("Projeto adicionado", {
-        description: `O projeto "${data.name}" foi adicionado com sucesso.`,
-      });
+      const projectData = {
+        clientId: Number.parseInt(data.clientId),
+        name: data.name,
+        link: data.link,
+        status: data.status,
+        value: data.value
+          ? Number.parseFloat(data.value.replace(",", "."))
+          : undefined,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      };
+
+      if (isEditing && currentProject) {
+        const updatedProject = await updateProject(
+          currentProject.id,
+          projectData
+        );
+        setProjects(
+          projects.map((p) => (p.id === currentProject.id ? updatedProject : p))
+        );
+        toast.success("Projeto atualizado", {
+          description: `O projeto "${data.name}" foi atualizado com sucesso.`,
+        });
+      } else {
+        const newProject = await createProject(projectData);
+        setProjects([...projects, newProject]);
+        toast.success("Projeto adicionado", {
+          description: `O projeto "${data.name}" foi adicionado com sucesso.`,
+        });
+      }
+      setFormOpen(false);
+      resetForm();
+    } catch (err) {
+      if (err instanceof HTTPError) {
+        const errorData = await err.response.json();
+        toast.error(
+          isEditing
+            ? "Falha ao atualizar projeto"
+            : "Falha ao adicionar projeto",
+          {
+            description:
+              errorData.message || "Ocorreu um erro. Tente novamente.",
+          }
+        );
+      } else {
+        toast.error(
+          isEditing
+            ? "Falha ao atualizar projeto"
+            : "Falha ao adicionar projeto",
+          {
+            description:
+              "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+          }
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setFormOpen(false);
-    resetForm();
   };
 
-  const deleteProject = (id: string) => {
-    setProjects(projects.filter((project) => project.id !== id));
-    toast.success("Projeto excluído", {
-      description: "O projeto foi excluído com sucesso.",
-    });
+  const handleDeleteProject = async (id: number) => {
+    try {
+      await deleteProject(id);
+      setProjects(projects.filter((project) => project.id !== id));
+      toast.success("Projeto excluído", {
+        description: "O projeto foi excluído com sucesso.",
+      });
+    } catch (err) {
+      toast.error("Falha ao excluir projeto", {
+        description: "Ocorreu um erro ao excluir o projeto. Tente novamente.",
+      });
+    }
   };
 
   return (
@@ -312,7 +388,15 @@ export default function DashboardProject() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProjects.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  <div className="flex justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredProjects.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
                   Nenhum projeto encontrado.
@@ -327,7 +411,7 @@ export default function DashboardProject() {
                   <TableCell className="font-medium text-zinc-100">
                     {project.name}
                     <div className="text-xs text-zinc-400">
-                      {project.client}
+                      {project.clientName}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -357,7 +441,7 @@ export default function DashboardProject() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-500 focus:text-red-500"
-                            onClick={() => deleteProject(project.id)}
+                            onClick={() => handleDeleteProject(project.id)}
                           >
                             <Trash className="mr-2 h-4 w-4" />
                             Excluir projeto
@@ -447,22 +531,30 @@ export default function DashboardProject() {
 
                 <FormField
                   control={form.control}
-                  name="client"
+                  name="clientId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-white">Cliente</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center rounded-md border border-zinc-700 bg-purple-950">
-                          <div className="flex h-10 w-10 items-center justify-center border-r border-zinc-700">
-                            <User className="h-5 w-5 text-zinc-400" />
-                          </div>
-                          <Input
-                            {...field}
-                            className="flex-1 border-0 bg-transparent text-white placeholder:text-zinc-500 focus-visible:ring-0"
-                            placeholder="Nome do cliente"
-                          />
-                        </div>
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="border-zinc-700 bg-purple-950 text-white">
+                            <SelectValue placeholder="Selecione um cliente" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="border-zinc-700 bg-purple-950 text-white">
+                          {clients.map((client) => (
+                            <SelectItem
+                              key={client.id}
+                              value={client.id.toString()}
+                            >
+                              {client.name} {client.surname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -626,8 +718,15 @@ export default function DashboardProject() {
                   <Button
                     type="submit"
                     className="bg-violet-600 text-white hover:bg-violet-700"
+                    disabled={isSubmitting}
                   >
-                    {isEditing ? "Atualizar" : "Salvar"}
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isEditing ? (
+                      "Atualizar"
+                    ) : (
+                      "Salvar"
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
