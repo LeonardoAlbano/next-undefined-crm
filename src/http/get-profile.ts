@@ -5,6 +5,7 @@ import { api } from "./api-client";
      id: string
      name: string | null
      email: string
+     avatarUrl: string | null
    }
  }
  
