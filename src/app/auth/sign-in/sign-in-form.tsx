@@ -3,6 +3,7 @@
 import { AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import BtnSignInWithGoogle from "@/assets/BtnSignInWithGoogle.svg";
@@ -18,8 +19,13 @@ import { signInWithEmailAndPassword } from "./actions";
 export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
 
+  const router = useRouter();
+
   const [{ errors, message, success }, handleSubmit, isPending] = useFormState(
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    () => {
+      router.push("/dashboard/home");
+    }
   );
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
