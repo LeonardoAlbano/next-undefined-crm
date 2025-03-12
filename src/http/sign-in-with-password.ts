@@ -25,4 +25,3 @@ export async function signInWithPassword({ email, password }: SignInWithPassword
     token: response.accessToken,
   };
 }
-

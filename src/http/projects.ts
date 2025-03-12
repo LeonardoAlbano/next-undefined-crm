@@ -50,4 +50,3 @@ export async function deleteProject(id: number): Promise<void> {
 export async function getUserClients(): Promise<Client[]> {
   return await getClients();
 }
-

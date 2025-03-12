@@ -3,7 +3,16 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { HTTPError } from "ky";
-import { List, Mail, Pencil, Phone, Search, Trash, X } from "lucide-react";
+import {
+  List,
+  Loader2,
+  Mail,
+  Pencil,
+  Phone,
+  Search,
+  Trash,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -217,7 +226,7 @@ export default function DashboardLeads() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-purple-950 px-4 py-6 md:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-start gap-6 px-4 py-6 md:px-8">
       <div className="flex w-full flex-col items-center gap-4 sm:flex-row">
         <div className="flex w-full items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 shadow-sm">
           <Search className="h-5 w-5 text-zinc-500" />
@@ -231,10 +240,10 @@ export default function DashboardLeads() {
 
         <Button
           variant="outline"
-          className="w-full whitespace-nowrap sm:w-auto"
+          className="w-full whitespace-nowrap border-none bg-gradient-to-r from-[#DEBEFFB5] via-[#DEBEFFB5] to-[#7E04FC] text-white hover:opacity-90 sm:w-auto"
           onClick={openAddForm}
         >
-          + Adicionar lead
+          + Adicionar Cliente
         </Button>
       </div>
 
@@ -243,40 +252,53 @@ export default function DashboardLeads() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40px]"></TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="w-[80px] text-right">Ações</TableHead>
+              <TableHead className="text-white">Nome</TableHead>
+              <TableHead className="text-white">Telefone</TableHead>
+              <TableHead className="text-white">Email</TableHead>
+              <TableHead className="w-[80px] text-right text-white">
+                Ações
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
-                  Carregando leads...
+                  <Loader2 className="size-4 animate-spin text-blackpurple" />
                 </TableCell>
               </TableRow>
             ) : filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  Nenhum lead encontrado.
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center font-bold text-white"
+                >
+                  Nenhum cliente encontrado.
                 </TableCell>
               </TableRow>
             ) : (
               filteredLeads.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell>
-                    <Checkbox />
+                    <Checkbox className="border-white" />
                   </TableCell>
-                  <TableCell className="font-medium text-zinc-100">
+                  <TableCell className="font-medium text-white">
                     {lead.name} {lead.surname}
                   </TableCell>
-                  <TableCell>{lead.phone || "-"}</TableCell>
-                  <TableCell>{lead.email || "-"}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-white">
+                    {lead.phone || "-"}
+                  </TableCell>
+                  <TableCell className="text-white">
+                    {lead.email || "-"}
+                  </TableCell>
+                  <TableCell className="te text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white"
+                        >
                           <List className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -291,7 +313,7 @@ export default function DashboardLeads() {
                             onClick={() => handleDeleteLead(lead.id)}
                           >
                             <Trash className="mr-2 h-4 w-4" />
-                            Excluir lead
+                            Excluir cliente
                           </DropdownMenuItem>
                         </DropdownMenuGroup>
                       </DropdownMenuContent>
@@ -335,14 +357,14 @@ export default function DashboardLeads() {
         <DialogContent className="border-none bg-purple-950 p-0 text-white sm:max-w-[620px]">
           <DialogHeader className="sr-only">
             <DialogTitle>
-              {isEditing ? "Editar lead" : "Adicionar novo lead"}
+              {isEditing ? "Editar cliente" : "Adicionar novo cliente"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col p-6">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">
-                {isEditing ? "Editar lead" : "Adicionar novo lead"}
+                {isEditing ? "Editar cliente" : "Adicionar novo cliente"}
               </h2>
               <button
                 onClick={() => setFormOpen(false)}

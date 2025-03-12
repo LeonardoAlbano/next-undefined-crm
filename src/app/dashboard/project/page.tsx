@@ -349,7 +349,7 @@ export default function DashboardProject() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-purple-950 px-4 py-6 md:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-start gap-6 px-4 py-6 md:px-8">
       <div className="flex w-full flex-col items-center gap-4 sm:flex-row">
         <div className="flex w-full items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 shadow-sm">
           <Search className="h-5 w-5 text-zinc-500" />
@@ -363,28 +363,30 @@ export default function DashboardProject() {
 
         <Button
           variant="outline"
-          className="w-full whitespace-nowrap sm:w-auto"
+          className="w-full whitespace-nowrap border-none bg-gradient-to-r from-[#DEBEFFB5] via-[#DEBEFFB5] to-[#7E04FC] text-white sm:w-auto"
           onClick={openAddForm}
         >
           + Adicionar projeto
         </Button>
       </div>
 
-      <div className="w-full overflow-x-auto rounded-md border bg-zinc-900/50">
+      <div className="w-full overflow-x-auto rounded-md border bg-blackpurple shadow-md">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40px]"></TableHead>
-              <TableHead>Nome do Projeto</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead className="hidden md:table-cell">
+              <TableHead className="text-white">Nome do Projeto</TableHead>
+              <TableHead className="text-white">Status</TableHead>
+              <TableHead className="text-white">Valor</TableHead>
+              <TableHead className="hidden text-white md:table-cell">
                 Início previsto
               </TableHead>
-              <TableHead className="hidden md:table-cell">
+              <TableHead className="hidden text-white md:table-cell">
                 Término previsto
               </TableHead>
-              <TableHead className="w-[80px] text-right">Ações</TableHead>
+              <TableHead className="w-[80px] text-right text-white">
+                Ações
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -398,7 +400,10 @@ export default function DashboardProject() {
               </TableRow>
             ) : filteredProjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell
+                  colSpan={7}
+                  className="h-24 text-center font-bold text-white"
+                >
                   Nenhum projeto encontrado.
                 </TableCell>
               </TableRow>
@@ -406,7 +411,7 @@ export default function DashboardProject() {
               filteredProjects.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell>
-                    <Checkbox />
+                    <Checkbox className="border-white" />
                   </TableCell>
                   <TableCell className="font-medium text-zinc-100">
                     {project.name}
@@ -417,17 +422,23 @@ export default function DashboardProject() {
                   <TableCell>
                     <StatusBadge status={project.status} />
                   </TableCell>
-                  <TableCell>{formatCurrency(project.value)}</TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="text-white">
+                    {formatCurrency(project.value)}
+                  </TableCell>
+                  <TableCell className="hidden text-white md:table-cell">
                     {formatDate(project.startDate)}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden text-white md:table-cell">
                     {formatDate(project.endDate)}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white"
+                        >
                           <List className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

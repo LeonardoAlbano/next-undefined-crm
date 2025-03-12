@@ -80,7 +80,7 @@ export default function DashboardBoard() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-sky-950 py-8 pb-52">
+    <div className="flex min-h-screen items-center justify-center py-8 pb-52">
       <div className="flex gap-4">
         {columns.map((column) => (
           <KanbanColumn

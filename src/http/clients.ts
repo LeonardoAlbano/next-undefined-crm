@@ -38,4 +38,3 @@ export async function updateClient(id: number, data: CreateClientRequest): Promi
 export async function deleteClient(id: number): Promise<void> {
   await api.delete(`clients/${id}`);
 }
-
