@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 
-// Tipos
 interface User {
   id: string;
   name: string;
@@ -141,6 +140,7 @@ export default function DashboardUsers() {
               <TableRow>
                 <TableHead className="w-[40px]">
                   <Checkbox
+                    className="border-white"
                     checked={
                       selectedUsers.length === filteredUsers.length &&
                       filteredUsers.length > 0
@@ -148,15 +148,20 @@ export default function DashboardUsers() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Nome do usuário</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="w-[80px] text-right">Ações</TableHead>
+                <TableHead className="text-white">Nome do usuário</TableHead>
+                <TableHead className="text-white">Email</TableHead>
+                <TableHead className="w-[80px] text-right text-white">
+                  Ações
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell
+                    colSpan={4}
+                    className="h-24 text-center text-white"
+                  >
                     Nenhum usuário encontrado.
                   </TableCell>
                 </TableRow>
@@ -165,6 +170,7 @@ export default function DashboardUsers() {
                   <TableRow key={user.id}>
                     <TableCell>
                       <Checkbox
+                        className="border-white"
                         checked={selectedUsers.includes(user.id)}
                         onCheckedChange={() => toggleSelectUser(user.id)}
                       />
@@ -177,12 +183,12 @@ export default function DashboardUsers() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="text-white">{user.email}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
-                            <List className="h-4 w-4" />
+                            <List className="h-4 w-4 text-white" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
