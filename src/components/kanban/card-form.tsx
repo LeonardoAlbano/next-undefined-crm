@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import type { Card } from "@/@types/kanban";
 import { Button } from "@/components/ui/button";
 import {
   DialogContent,
@@ -9,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Card } from "@/@types/kanban";
 
 interface CardFormProps {
   onSubmit: (data: Omit<Card, "id">) => void;

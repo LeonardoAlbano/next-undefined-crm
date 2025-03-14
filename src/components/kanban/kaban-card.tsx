@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 
+import type { Card } from "@/@types/kanban";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import {
@@ -12,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Card } from "@/@types/kanban";
 
 import { CardForm } from "./card-form";
 

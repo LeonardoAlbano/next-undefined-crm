@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 
+import type { Card, Column } from "@/@types/kanban";
 import { CardForm } from "@/components/kanban/card-form";
 import { KanbanCard } from "@/components/kanban/kaban-card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Card, Column } from "@/@types/kanban";
 
 interface KanbanColumnProps {
   column: Column;
