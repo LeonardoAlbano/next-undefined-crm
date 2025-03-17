@@ -73,7 +73,6 @@ export function KanbanCard({ card, onEdit, onDelete }: KanbanCardProps) {
         </span>
       </div>
 
-      {/*dialog*/}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <CardForm
           title="Editar card"
