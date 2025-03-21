@@ -9,14 +9,12 @@ import TotalValueCard from "@/components/dashboard/home-card/total-value-card";
 import { type Client, getClients } from "@/http/clients";
 import { getProjects, type Project } from "@/http/projects";
 
-// Definindo o tipo para os dados do gráfico de pizza
 export interface PieChartData {
   status: string;
   amount: number;
   color: string;
 }
 
-// Definindo o tipo para o objeto de status
 interface StatusCount {
   [key: string]: number;
 }
@@ -46,12 +44,10 @@ export default function DashboardHome() {
     loadData();
   }, []);
 
-  // Calcular o valor total de todos os projetos
   const totalValue = projects.reduce((sum, project) => {
     return sum + (project.value || 0);
   }, 0);
 
-  // Agrupar projetos por status
   const projectsByStatus: StatusCount = projects.reduce(
     (acc: StatusCount, project) => {
       const status = project.status || "Não definido";
@@ -64,7 +60,6 @@ export default function DashboardHome() {
     {}
   );
 
-  // Formatar dados para o gráfico de pizza
   const pieChartData: PieChartData[] = [
     {
       status: "Completos",
@@ -87,8 +82,6 @@ export default function DashboardHome() {
       color: "#BD63FF",
     },
   ];
-
-  // Filtrar projetos ativos para a tabela - mostrando todos os projetos ativos independente do cliente
   const activeProjects = projects
     .filter(
       (project) =>
