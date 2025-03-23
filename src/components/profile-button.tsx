@@ -1,6 +1,8 @@
+"use client";
+
 import { ChevronDown, LogOut } from "lucide-react";
 
-import { auth } from "@/auth/auth";
+import { signOut } from "@/app/auth/actions";
 
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -20,14 +22,21 @@ function getInitials(name: string): string {
   return initials;
 }
 
-export async function ProfileButton() {
-  const { user } = await auth();
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatarUrl: string | null;
+};
 
+export function ProfileButton({ user }: { user: User }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-3 outline-none">
         <div className="flex flex-col items-end">
-          <span className="text-sm font-medium text-white">{user.name}</span>
+          <span className="text-sm font-medium text-white">
+            {user.name || "User"}
+          </span>
           <span className="text-xs text-muted-foreground">{user.email}</span>
         </div>
         <Avatar>
@@ -40,10 +49,12 @@ export async function ProfileButton() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <a href="/api/auth/sign-out">
-            <LogOut className="mr-2 size-4" />
-            Sign Out
-          </a>
+          <form action={signOut}>
+            <button className="flex w-full items-center">
+              <LogOut className="mr-2 size-4" />
+              Sign Out
+            </button>
+          </form>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

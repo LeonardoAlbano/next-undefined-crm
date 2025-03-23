@@ -1,13 +1,10 @@
 "use server";
- 
- import { auth, signIn, signOut } from "@/lib/auth";
- 
- export async function manageAuth() {
-   const session = await auth();
- 
-   if (!session) {
-     return await signIn("google", { redirectTo: "/criar" });
-   }
- 
-   return await signOut({ redirectTo: "/" });
- }
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export async function signOut() {
+  const cookieStore = await cookies();
+  cookieStore.delete("token");
+  redirect("/auth/sign-in");
+}
