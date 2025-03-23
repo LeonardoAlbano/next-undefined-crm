@@ -23,3 +23,4 @@ export async function signInWithGoogle({ token }: SignInWithGoogleParams) {
     token: response.accessToken,
   };
 }
+
